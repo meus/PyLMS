@@ -21,6 +21,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 import telnetlib
 import urllib
+import pylms
 from pylms.player import Player
 
 
@@ -78,81 +79,116 @@ class Server(object):
         result = self.request("login %s %s" % (self.username, self.password))
         self.logged_in = (result == "******")
 
-    def request(self, command_string, preserve_encoding=False):
+    def request(self, command_string="", received=None, preserve_encoding=False):
         """
         Request
         """
+
         # self.logger.debug("Telnet: %s" % (command_string))
-        self.telnet.write(self.__encode(command_string + "\n"))
-        response = self.telnet.read_until(self.__encode("\n"))[:-1]
-        if not preserve_encoding:
-            response = self.__decode(self.__unquote(response))
+        if received == None:
+            self.telnet.write(pylms.encode(command_string + "\n", self.charset))
+            response = self.telnet.read_until(pylms.encode("\n", self.charset))[:-1]
+            print "Sent command string [%s]" % command_string
+
         else:
-            command_string_quoted = \
-                command_string[0:command_string.find(':')] + \
-                command_string[command_string.find(':'):].replace(
-                    ':', self.__quote(':'))
+            response = received
+
+        print "LMS Response: [%s]" % response
+
         start = command_string.split(" ")[0]
+
+        if not preserve_encoding:
+            response = self.decode_response(response)
+            command_string = command_string
+
+        if preserve_encoding:
+            response = response
+            command_string = self.quote_command_string(command_string)
+
         if start in ["songinfo", "trackstat", "albums", "songs", "artists",
                      "rescan", "rescanprogress"]:
-            if not preserve_encoding:
-                result = response[len(command_string)+1:]
-            else:
-                result = response[len(command_string_quoted)+1:]
+            result = response[len(command_string) + 1:]
         else:
-            if not preserve_encoding:
-                result = response[len(command_string)-1:]
-            else:
-                result = response[len(command_string_quoted)-1:]
+            result = response[len(command_string) - 1:]
+
         return result
 
-    def request_with_results(self, command_string, preserve_encoding=False):
+    def decode_response(self, response):
+        return pylms.decode(pylms.unquote(response, self.charset), self.charset)
+
+    def quote_command_string(self, command_string):
+        return command_string[0:command_string.find(':')] + \
+                command_string[command_string.find(':'):].replace(
+                    ':', pylms.quote(':', self.charset))
+
+    def player_refs(self):
+        return [pylms.quote(player.get_ref(), self.charset) for player in self.players]
+
+    def request_with_results(self, command_string, received=None, preserve_encoding=False):
         """
         Request with results
         Return tuple (count, results, error_occurred)
         """
-        quotedColon = self.__quote(':')
-        try:
+        quotedColon = pylms.quote(':', self.charset)
+        #debugindent
+        if 1==1:
+        # try:
             #init
-            quotedColon = urllib.quote(':')
-            #request command string
-            resultStr = ' '+self.request(command_string, True)
-            #get number of results
-            count = 0
-            if resultStr.rfind('count%s' % quotedColon) >= 0:
-                count = int(resultStr[resultStr.rfind(
-                    'count%s' % quotedColon):].replace(
-                    'count%s' % quotedColon, ''))
-            # remove number of results from result string and cut
-            # result string by "id:"
-            idIsSep = True
-            if resultStr.find(' id%s' % quotedColon) < 0:
-                idIsSep = False
-            if resultStr.find('count') >= 0:
-                resultStr = resultStr[:resultStr.rfind('count')-1]
-            results = resultStr.split(' id%s' % quotedColon)
+            if command_string:
+                #request command string
+                resultStr = self.request(command_string, received, True)
 
-            output = []
-            for result in results:
-                result = result.strip()
-                if len(result) > 0:
-                    if idIsSep:
-                        #fix missing 'id:' at beginning
-                        result = 'id%s%s' % (quotedColon, result)
-                    subResults = result.split(' ')
-                    item = {}
-                    for subResult in subResults:
-                        #save item
-                        key, value = subResult.split(quotedColon, 1)
-                        if not preserve_encoding:
-                            item[urllib.unquote(key)] = self.__unquote(value)
-                        else:
-                            item[key] = value
-                    output.append(item)
-            return count, output, False
-        except Exception as e:
-            #error parsing results (not correct?)
-            return 0, [], True
+            elif received is not None:
+                resultStr = received
+
+            if self.player_update_received(resultStr):
+                update = [pylms.unquote(i, self.charset) for i in resultStr.split(" ")]
+                print update
+
+            else:
+                #get number of results
+                resultStr = ' ' + resultStr
+                count = 0
+                if resultStr.rfind('count%s' % quotedColon) >= 0:
+                    count = int(resultStr[resultStr.rfind(
+                        'count%s' % quotedColon):].replace(
+                        'count%s' % quotedColon, ''))
+                # remove number of results from result string and cut
+                # result string by "id:"
+                idIsSep = True
+                if resultStr.find(' id%s' % quotedColon) < 0:
+                    idIsSep = False
+                if resultStr.find('count') >= 0:
+                    resultStr = resultStr[:resultStr.rfind('count')-1]
+                results = resultStr.split(' id%s' % quotedColon)
+
+                output = []
+                for result in results:
+                    result = result.strip()
+                    if len(result) > 0:
+                        if idIsSep:
+                            #fix missing 'id:' at beginning
+                            result = 'id%s%s' % (quotedColon, result)
+                        subResults = result.split(' ')
+                        item = {}
+                        for subResult in subResults:
+                            #save item
+                            key, value = subResult.split(quotedColon, 1)
+                            if not preserve_encoding:
+                                item[urllib.unquote(key)] = pylms.unquote(value, self.charset)
+                            else:
+                                item[key] = value
+                        output.append(item)
+                return count, output, False
+
+            # except Exception as e:
+            #     #error parsing results (not correct?)
+            #     return 0, [], True
+
+    def player_update_received(self, response):
+        for player in self.player_refs():
+            if response.find(player):
+                return True
 
     def get_players(self, update=True):
         """
@@ -170,7 +206,7 @@ class Server(object):
         Get Player
         """
         if isinstance(ref, str):
-            ref = self.__decode(ref)
+            ref = pylms.decode(ref, self.charset)
         ref = ref.lower()
         if ref:
             for player in self.players:
@@ -234,25 +270,3 @@ class Server(object):
         Return current rescan progress
         """
         return self.request_with_results("rescanprogress")
-
-    def __encode(self, text):
-        return text.encode(self.charset)
-
-    def __decode(self, bytes):
-        return bytes.decode(self.charset)
-
-    def __quote(self, text):
-        try:
-            import urllib.parse
-            return urllib.parse.quote(text, encoding=self.charset)
-        except ImportError:
-            import urllib
-            return urllib.quote(text)
-
-    def __unquote(self, text):
-        try:
-            import urllib.parse
-            return urllib.parse.unquote(text, encoding=self.charset)
-        except ImportError:
-            import urllib
-            return urllib.unquote(text)
