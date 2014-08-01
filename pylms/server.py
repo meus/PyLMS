@@ -4,6 +4,8 @@ PyLMS: Python Wrapper for Logitech Media Server CLI
 
 Copyright (C) 2010 JingleManSweep <jinglemansweep [at] gmail [dot] com>
 
+Forked for use as a listening Client by Ben Weiner, https://github.com/readingtype
+
 This program is free software; you can redistribute it and/or
 modify it under the terms of the GNU General Public License
 as published by the Free Software Foundation; either version 2
@@ -142,8 +144,8 @@ class Server(object):
                 resultStr = received
 
             if self.player_update_received(resultStr):
-                update = [pylms.unquote(i, self.charset) for i in resultStr.split(" ")]
-                print update
+                data = [pylms.unquote(i, self.charset) for i in resultStr.split(" ")]
+                self.update(data)
 
             else:
                 #get number of results

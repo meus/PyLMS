@@ -1,4 +1,9 @@
-__author__ = 'ben'
+__author__ = 'Ben Weiner, http://github.com/readingtype'
+
+"""
+A listening Client derived from Server by Ben Weiner, https://github.com/readingtype
+Start the Client instance in a thread so you can do other stuff while it is running.
+"""
 
 import telnetlib
 import urllib
@@ -17,10 +22,6 @@ class Client(Server):
             if received:
                 status = self.request_with_results(command_string=None, received=received)
 
-    def stop(self):
-        exit()
-
-if __name__ == "__main__":
-
-    my_client = Client("192.168.0.24", 9090)
-    my_client.start()
+    def update(self, data):
+        # overload this in your instance to do stuff
+        print "update: %s" % data
