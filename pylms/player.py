@@ -101,6 +101,7 @@ class Player(object):
             self.is_connected = bool(self.__unquote(
                 self.server.request("player connected %i ?" % index)
             ))
+            self.get_mode()
 
     ## getters/setters
 
