@@ -87,7 +87,7 @@ class Server(object):
         """
 
         # self.logger.debug("Telnet: %s" % (command_string))
-        if received == None:
+        if not received or received is None:
             self.telnet.write(pylms.encode(command_string + "\n", self.charset))
             response = self.telnet.read_until(pylms.encode("\n", self.charset))[:-1]
             print "Sent command string [%s]" % command_string
