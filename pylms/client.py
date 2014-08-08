@@ -22,6 +22,12 @@ class Client(Server):
             if received:
                 status = self.request_with_results(command_string=None, received=received)
 
+    def telnet_connect(self):
+        """
+        Stay connected forever
+        """
+        self.telnet = telnetlib.Telnet(self.hostname, self.port, timeout=None)
+
     def update(self, data):
         # overload this in your instance to do stuff
         print "update: %s" % data
