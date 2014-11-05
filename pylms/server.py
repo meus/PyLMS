@@ -175,7 +175,10 @@ class Server(object):
                         item = {}
                         for subResult in subResults:
                             #save item
-                            key, value = subResult.split(quotedColon, 1)
+                            try:
+                                key, value = subResult.split(quotedColon, 1)
+                            except Exception as ex:
+                                key, value = subResult, ""
                             if not preserve_encoding:
                                 item[urllib.unquote(key)] = pylms.unquote(value, self.charset)
                             else:
