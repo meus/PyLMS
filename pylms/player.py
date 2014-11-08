@@ -255,22 +255,22 @@ class Player(object):
 
     def get_track_genre(self):
         """Get Players Current Track Genre"""
-        self.track_genre = str(self.request("genre ?"))
+        self.track_genre = self.request("genre ?")
         return self.track_genre
 
     def get_track_artist(self):
         """Get Players Current Track Artist"""
-        self.track_artist = str(self.request("artist ?"))
+        self.track_artist = self.request("artist ?")
         return self.track_artist
 
     def get_track_album(self):
         """Get Players Current Track Album"""
-        self.track_album = str(self.request("album ?"))
+        self.track_album = self.request("album ?")
         return self.track_album
 
     def get_track_title(self):
         """Get Players Current Track Title"""
-        self.track_title = str(self.request("title ?"))
+        self.track_title = self.request("title ?")
         return self.track_title
 
     def get_track_duration(self):
